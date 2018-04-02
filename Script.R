@@ -84,3 +84,16 @@ lasso_test_mse = mean((lasso_test_pred - testy) ^ 2)
 lasso_train_mse
 lasso_test_mse
 lasso_coef = predict(model.lasso, s = bestlambda, type = "coefficient")[1:200,]
+
+# knn regression on user_score, critic_score, critic_count and user_count
+k_range = c(10,20,30,40,50,60,70,80,90,100,110,150,200,500)
+testMse_knn = c()
+trainData$User_Score = as.numeric(trainData$User_Score)
+testData$User_Score = as.numeric(testData$User_Score)
+for (i in 1:length(k_range)) {
+    knn_model = knn.reg(train=scale(trainData[, c(11, 12, 13, 14)]), test = scale(testData[, c(11, 12, 13, 14)]), y = trainData$Global_Sales, k = k_range[i])
+    testMse_knn[i]=mean((knn_model$pred-testData$Global_Sales)^2)
+}
+testMse_knn
+# The best k=100
+knn_best_model = knn.reg(train = scale(trainData[, c(11, 12, 13, 14)]), test = scale(testData[, c(11, 12, 13, 14)]), y = trainData$Global_Sales, k = 100)
