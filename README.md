@@ -10,4 +10,6 @@ In progress:
 
 #2 lasso regression to predict sale and dimension deduction, done.
 
+#3 knn regression to predict sale, done.
+
 Data source: https://www.kaggle.com/gregorut/videogamesales
