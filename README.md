@@ -12,4 +12,6 @@ In progress:
 
 #3 knn regression to predict sale, done.
 
+#4 plot.py is used to visualize data.
+
 Data source: https://www.kaggle.com/gregorut/videogamesales
