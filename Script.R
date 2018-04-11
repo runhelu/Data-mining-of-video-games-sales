@@ -28,7 +28,7 @@ strategy = data[data$Genre == "Strategy",]
 strategysale = sum(strategy$Global_Sales)
 
 Global_Sales_ALL = c(actionsale, adventuresale, fightingsale, miscsale, platformsale, puzzlesale, racingsale, rpgsale, shootersale, simulationsale, sportsale, strategysale)
-barplot(height = c(Global_Sales_ALL[1], Global_Sales_ALL[11], Global_Sales_ALL[9], Global_Sales_ALL[8], Global_Sales_ALL[7], Global_Sales_ALL[5], Global_Sales_ALL[4], Global_Sales_ALL[3], Global_Sales_ALL[10], Global_Sales_ALL[2], Global_Sales_ALL[6], Global_Sales_ALL[12]),names = c("action", "sport", "shoot", "rpg", "race", "platf", "misc", "fight", "sim", "adven", "puzz", "strat"),main="Global sales vs. Genre")
+barplot(height = c(Global_Sales_ALL[1], Global_Sales_ALL[11], Global_Sales_ALL[9], Global_Sales_ALL[8], Global_Sales_ALL[7], Global_Sales_ALL[5], Global_Sales_ALL[4], Global_Sales_ALL[3], Global_Sales_ALL[10], Global_Sales_ALL[2], Global_Sales_ALL[6], Global_Sales_ALL[12]), names = c("action", "sport", "shoot", "rpg", "race", "platf", "misc", "fight", "sim", "adven", "puzz", "strat"), main = "Global sales vs. Genre")
 
 # year trend of games
 all_1996 = data[data$Year_of_Release == "1996",]
@@ -55,7 +55,7 @@ all_2016 = data[data$Year_of_Release == "2016",]
 all_2017 = data[data$Year_of_Release == "2017",]
 year = c(1996:2017)
 global_sale_year = c(sum(all_1996$Global_Sales), sum(all_1997$Global_Sales), sum(all_1998$Global_Sales), sum(all_1999$Global_Sales), sum(all_2000$Global_Sales), sum(all_2001$Global_Sales), sum(all_2002$Global_Sales), sum(all_2003$Global_Sales), sum(all_2004$Global_Sales), sum(all_2005$Global_Sales), sum(all_2006$Global_Sales), sum(all_2007$Global_Sales), sum(all_2008$Global_Sales), sum(all_2009$Global_Sales), sum(all_2010$Global_Sales), sum(all_2011$Global_Sales), sum(all_2012$Global_Sales), sum(all_2013$Global_Sales), sum(all_2014$Global_Sales), sum(all_2015$Global_Sales), sum(all_2016$Global_Sales), sum(all_2017$Global_Sales))
-plot(year, global_sale_year, type = 'b', lwd = 2,main="Global sales vs. Year")
+plot(year, global_sale_year, type = 'b', lwd = 2, main = "Global sales vs. Year")
 
 #in order to predict sales:
 # 80% training data, 20% test data
@@ -64,20 +64,24 @@ trainid = sample(1:nrow(data), size = trunc(nrow(data) * 0.8))
 trainData = data[trainid,]
 testData = data[-trainid,]
 #Predict sale
+
+temp = data.frame(data$Critic_Count, data$User_Count, data$Critic_Score, data$User_Score)
+pairs(temp)
+
 # first basic method: lasso regression
 library(glmnet)
 set.seed(12345)
-trainx = model.matrix(Global_Sales ~ . - NA_Sales - EU_Sales - JP_Sales - Other_Sales - Global_Sales - Name-Publisher-Year_of_Release, data = trainData)[, -1]
+trainx = model.matrix(Global_Sales ~ . - NA_Sales - EU_Sales - JP_Sales - Other_Sales - Global_Sales - Name - Publisher - Year_of_Release, data = trainData)[, -1]
 trainy = trainData$Global_Sales
-testx = model.matrix(Global_Sales ~ . - NA_Sales - EU_Sales - JP_Sales - Other_Sales - Global_Sales - Name-Publisher-Year_of_Release, data = testData)[, -1]
+testx = model.matrix(Global_Sales ~ . - NA_Sales - EU_Sales - JP_Sales - Other_Sales - Global_Sales - Name - Publisher - Year_of_Release, data = testData)[, -1]
 testy = testData$Global_Sales
 #use cross validation to choose the best lambda in lasso regression
 cv.out = cv.glmnet(trainx, trainy, alpha = 1)
 plot(cv.out)
 bestlambda = cv.out$lambda.min
-
+bestlambda
 #using the best lambda to do lasso regression:
-model.lasso = glmnet(trainx, trainy, lambda = bestlambda,alpha = 1)
+model.lasso = glmnet(trainx, trainy, lambda = bestlambda, alpha = 1)
 lasso_train_pred = predict(model.lasso, s = bestlambda, newx = trainx)
 lasso_train_mse = mean((lasso_train_pred - trainy) ^ 2)
 lasso_test_pred = predict(model.lasso, s = bestlambda, newx = testx)
@@ -88,18 +92,26 @@ lasso_coef = predict(model.lasso, s = bestlambda, type = "coefficient")[1:200,]
 #Year of release and genre are not good predictors
 # knn regression on user_score, critic_score, critic_count and user_count
 library("FNN")
-k_range = c(1,2,5,10,20,50,100,150,200,500)
+k_range = c(1, 2, 5, 10, 20, 50, 100, 150, 200, 500)
 testMse_knn = c()
 trainData$User_Score = as.numeric(trainData$User_Score)
 testData$User_Score = as.numeric(testData$User_Score)
 for (i in 1:length(k_range)) {
-    knn_model = knn.reg(train=scale(trainData[, c(11, 12, 13, 14)]), test = scale(testData[, c(11, 12, 13, 14)]), y = trainData$Global_Sales, k = k_range[i])
-    testMse_knn[i]=mean((knn_model$pred-testData$Global_Sales)^2)
+    knn_model = knn.reg(train = scale(trainData[, c(11, 12, 13, 14)]), test = scale(testData[, c(11, 12, 13, 14)]), y = trainData$Global_Sales, k = k_range[i])
+    testMse_knn[i] = mean((knn_model$pred - testData$Global_Sales) ^ 2)
 }
 testMse_knn
-plot(testMse_knn ~ c(1,1/2,1/5, 1 / 10, 1 / 20, 1 / 50, 1 / 100, 1 / 150, 1 / 200,1/500), type = "b", lwd = 2, col = "blue", main = "Test MSE for KNN", xlab = "1/K", ylab = "MSE")
+plot(testMse_knn ~ c(1, 1 / 2, 1 / 5, 1 / 10, 1 / 20, 1 / 50, 1 / 100, 1 / 150, 1 / 200, 1 / 500), type = "b", lwd = 2, col = "blue", main = "Test MSE for KNN", xlab = "1/K", ylab = "MSE")
 
 # The best k=100
 knn_best_model = knn.reg(train = scale(trainData[, c(11, 12, 13, 14)]), test = scale(testData[, c(11, 12, 13, 14)]), y = trainData$Global_Sales, k = 100)
 
-
+#linear regression AIC:
+library(leaps)
+regfit.full = regsubsets(Global_Sales ~ . - NA_Sales - EU_Sales - JP_Sales - Other_Sales - Global_Sales - Name - Publisher - Developer - Rating - Year_of_Release - Platform, trainData, really.big = T)
+reg.summry = summary(regfit.full)
+which.min(reg.summry$cp)
+plot(regfit.full, scale = "Cp")
+plot(regfit.full,scale="bic")
+mod1 <- lm(Global_Sales ~ . - NA_Sales - EU_Sales - JP_Sales - Other_Sales - Global_Sales - Name - Publisher - Developer - Rating - Year_of_Release - Platform, data = trainData)
+plot(mod1)
